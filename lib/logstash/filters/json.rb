@@ -46,6 +46,11 @@ class LogStash::Filters::Json < LogStash::Filters::Base
   # NOTE: if the `target` field already exists, it will be overwritten!
   config :target, :validate => :string
 
+
+  # Replace /xNN fields with /u fields to fix log-couruer bugs we have been noticing
+  config :ignore_hex_codes, :validate => :boolean, :default => false
+
+
   public
   def register
     # Nothing to do here
@@ -60,9 +65,13 @@ class LogStash::Filters::Json < LogStash::Filters::Base
     return unless event.include?(@source)
 
     # TODO(colin) this field merging stuff below should be handled in Event.
+    if @ignore_hex_codes
+      @source = @source.gsub('\x', '\u00')
+    end
 
     source = event[@source]
 
+ 
     begin
       parsed = LogStash::Json.load(source)
       # If your parsed JSON is an array, we can't merge, so you must specify a
